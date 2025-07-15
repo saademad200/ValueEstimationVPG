@@ -4,6 +4,14 @@ This repository contains the code and implementation details in the paper **Impr
 
 The empirical results presented in the paper were obtained using `examples/mujoco/run_experiments.sh`, which is adapted from **[Tianshou](https://github.com/thu-ml/tianshou)**. However, we understand that the Tianshou library is somewhat complex. For easier reproduction, we also provide a simplified, single-file implementation `VPG_single_file.py` adapted from **[CleanRL](https://github.com/vwxyzjn/cleanrl)** which removes some non-essential components from the original implementation.
 
+For prerequisites, please check with `requirements.txt` in **[CleanRL](https://github.com/vwxyzjn/cleanrl)**. Note that since we only conduct experiments on robotics environments in **[Gymnasium](https://gymnasium.farama.org/)**, not all dependencies required by CleanRL need to be installed to run our experiments.
+
+An example use of `VPG_single_file.py`:
+```
+python VPG_single_file.py --env_id Hopper-v4 --seed 1 --num_value_step 50
+```
+
+
 If you find our work helpful, please cite:
 ```
 @inproceedings{
