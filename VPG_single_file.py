@@ -124,7 +124,7 @@ if __name__ == "__main__":
     args = tyro.cli(Args)
     args.batch_size = int(args.num_envs * args.num_steps)
     args.num_iterations = args.total_timesteps // args.batch_size
-    run_name = f"{args.env_id}__{args.exp_name}__{int(time.time())}"
+    run_name = f"{args.env_id}__VPG_vs{args.num_value_step}_g{args.gamma}_s{args.seed}"
 
     # Initialize wandb if tracking is enabled
     if args.track:
@@ -264,22 +264,26 @@ if __name__ == "__main__":
         # Average episodic reward for this iteration
         if episode_rewards:
             avg_reward = np.mean(episode_rewards)
-            writer.add_scalar("charts/avg_episode_reward", avg_reward, iteration)
-            print(f"Iteration {iteration}, Average Episode Reward: {avg_reward}")
+            writer.add_scalar("charts/avg_episode_reward", avg_reward, global_step)
+            # Also log as train/reward to match PPO (Tianshou naming)
+            writer.add_scalar("train/reward", avg_reward, global_step)
+            writer.add_scalar("train/length", np.mean([info['episode']['l'] for info in infos if isinstance(info, dict) and 'episode' in info]), global_step)
+            print(f"Iteration {iteration}, Step {global_step}, Avg Reward: {avg_reward}")
 
         # Cumulative reward across all steps of this iteration
         cum_reward = rewards.sum().item()
-        writer.add_scalar("charts/cumulative_reward", cum_reward, iteration)
+        writer.add_scalar("charts/cumulative_reward", cum_reward, global_step)
 
-        # Log training metrics
-        writer.add_scalar("charts/learning_rate", actor_optimizer.param_groups[0]['lr'], iteration)
-        writer.add_scalar("losses/value_loss", v_loss.item(), iteration)
-        writer.add_scalar("losses/policy_loss", pg_loss.item(), iteration)
-        writer.add_scalar("losses/entropy", entropy_loss.item(), iteration)
-        writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), iteration)
+        # Log training metrics (use global_step for consistency with PPO)
+        writer.add_scalar("charts/learning_rate", actor_optimizer.param_groups[0]['lr'], global_step)
+        writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
+        writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
+        writer.add_scalar("losses/entropy", entropy_loss.item(), global_step)
+        writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
-        # evaluate policy every 10000 steps
-        if (((global_step + args.batch_size) // 10000) - ((global_step) // 10000)) > 0:
+
+        # evaluate policy every 10240 steps (matches PPO step-per-epoch for aligned charts)
+        if (((global_step + args.batch_size) // 10240) - ((global_step) // 10240)) > 0:
             envs2.obs_rms = envs.obs_rms
             obser, info = envs2.reset(seed=args.seed)
             S = 0.
@@ -291,10 +295,23 @@ if __name__ == "__main__":
                 S = S + reward
                 if terminated or truncated:
                     break
-            print("Cumulative Reward:", S[0])
+            # Log as test/reward to match PPO (Tianshou naming)
+            writer.add_scalar("test/reward", S[0], global_step)
+            print("Eval (test) Reward:", S[0])
             print("Iteration", iteration)
-            reward_curve.append(S[0])
+            reward_curve.append((global_step, S[0]))  # Store (timestep, reward) tuple
 
-    #    print("SPS:", int(global_step / (time.time() - start_time)))
     envs.close()
     print("Time elapsed (s):", time.time() - start_time)
+    
+    # Save learning curve to CSV for plotting
+    import csv
+    os.makedirs("results", exist_ok=True)
+    csv_path = f"results/learning_curve_vpg_{args.env_id}_s{args.seed}.csv"
+    with open(csv_path, 'w', newline='') as f:
+        writer_csv = csv.writer(f)
+        writer_csv.writerow(['timestep', 'reward', 'algorithm', 'env', 'seed'])
+        for timestep, reward in reward_curve:
+            writer_csv.writerow([timestep, reward, 'VPG', args.env_id, args.seed])
+    print(f"Saved learning curve to {csv_path}")
+
