@@ -271,6 +271,10 @@ if __name__ == "__main__":
             writer.add_scalar("train/reward", avg_reward, global_step)
             print(f"Step {global_step}, Reward: {avg_reward:.2f}, Clip Frac: {clip_frac:.3f}")
 
+        # Cumulative reward across all steps of this iteration
+        cum_reward = rewards.sum().item()
+        writer.add_scalar("charts/cumulative_reward", cum_reward, global_step)
+
         writer.add_scalar("charts/clip_fraction", clip_frac, global_step)
         writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
         writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
@@ -302,3 +306,14 @@ if __name__ == "__main__":
     envs2.close()
     print(f"Time elapsed: {time.time() - start_time:.2f}s")
     print(f"Average clip fraction: {np.mean(clip_fractions):.3f}")
+
+    # Save learning curve to CSV for plotting
+    import csv
+    os.makedirs("results", exist_ok=True)
+    csv_path = f"results/learning_curve_{args.exp_name}_{args.env_id}_s{args.seed}.csv"
+    with open(csv_path, 'w', newline='') as f:
+        writer_csv = csv.writer(f)
+        writer_csv.writerow(['timestep', 'reward', 'algorithm', 'env', 'seed'])
+        for timestep, reward in reward_curve:
+            writer_csv.writerow([timestep, reward, 'VPG', args.env_id, args.seed])
+    print(f"Saved learning curve to {csv_path}")

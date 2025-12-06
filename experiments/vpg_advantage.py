@@ -338,6 +338,10 @@ if __name__ == "__main__":
             writer.add_scalar("train/reward", avg_reward, global_step)
             print(f"Step {global_step}, Reward: {avg_reward:.2f}, Adv: {args.advantage_type}")
 
+        # Cumulative reward across all steps of this iteration
+        cum_reward = rewards.sum().item()
+        writer.add_scalar("charts/cumulative_reward", cum_reward, global_step)
+
         writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
         writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
         writer.add_scalar("charts/advantage_mean", b_advantages.mean().item(), global_step)

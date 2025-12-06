@@ -10,7 +10,7 @@ mkdir -p results/experiments
 
 MODE="${1:---quick}"
 
-WANDB_PROJECT="vpg-experiments"
+WANDB_PROJECT="value-estimation-experiments"
 WANDB_ENTITY="syedsaadhasanemad-iba-institute-of-business-administration"
 
 if [ "$MODE" = "--quick" ]; then
@@ -18,9 +18,9 @@ if [ "$MODE" = "--quick" ]; then
     SEEDS=(0)
     echo "=== Quick Mode: 500k steps, 1 seed ==="
 else
-    TIMESTEPS=5000000
+    TIMESTEPS=1000000
     SEEDS=(0 1 2)
-    echo "=== Full Mode: 5M steps, 3 seeds ==="
+    echo "=== Full Mode: 1M steps, 3 seeds ==="
 fi
 
 ENV="Hopper-v4"
