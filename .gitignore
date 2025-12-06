@@ -1,0 +1,6 @@
+*.pyc
+runs
+wandb
+*.logs
+logs
+*.txt
