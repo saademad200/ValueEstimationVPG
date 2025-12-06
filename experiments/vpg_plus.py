@@ -279,20 +279,26 @@ if __name__ == "__main__":
         # Evaluate every 10240 steps (matches PPO)
         if (((global_step + args.batch_size) // 10240) - ((global_step) // 10240)) > 0:
             envs2.obs_rms = envs.obs_rms
-            obser, info = envs2.reset(seed=args.seed)
-            S = 0.
-            for k in range(1000):
-                state = torch.tensor(obser, dtype=torch.float).to(device)
-                with torch.no_grad():
-                    v = agent.get_mean(state)
-                obser, reward, terminated, truncated, info = envs2.step(v.cpu().numpy())
-                S = S + reward
-                if terminated or truncated:
-                    break
-            writer.add_scalar("test/reward", S[0], global_step)
-            print(f"Eval Reward: {S[0]:.2f}")
-            reward_curve.append((global_step, S[0]))
+            eval_rewards = []
+            for eval_ep in range(10):
+                obser, info = envs2.reset(seed=int(args.seed) + eval_ep)
+                ep_ret = 0
+                while True:
+                    state = torch.tensor(obser, dtype=torch.float).to(device)
+                    with torch.no_grad():
+                        action = agent.get_mean(state)
+                    obser, reward, terminated, truncated, info = envs2.step(action.cpu().numpy())
+                    ep_ret += reward[0]
+                    if terminated[0] or truncated[0]:
+                        break
+                eval_rewards.append(ep_ret)
+            
+            avg_eval_reward = np.mean(eval_rewards)
+            writer.add_scalar("test/reward", avg_eval_reward, global_step)
+            print(f"Eval Reward: {avg_eval_reward:.2f}")
+            reward_curve.append((global_step, avg_eval_reward))
 
     envs.close()
+    envs2.close()
     print(f"Time elapsed: {time.time() - start_time:.2f}s")
     print(f"Average clip fraction: {np.mean(clip_fractions):.3f}")

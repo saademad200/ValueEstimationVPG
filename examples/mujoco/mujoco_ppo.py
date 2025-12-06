@@ -182,12 +182,13 @@ def test_ppo(args=get_args()):
     now = datetime.datetime.now().strftime("%y%m%d-%H%M%S")
     log_name = os.path.join(args.task, args.algo_name, str(args.seed), now)
     log_path = os.path.join(args.logdir, log_name)
+    run_name = f"{args.task}__PPO_g{args.gae_lambda}_s{args.seed}"
 
     # logger
     if args.logger == "wandb":
         logger = WandbLogger(
             save_interval=1,
-            name=log_name.replace(os.path.sep, "__"),
+            name=run_name,
             run_id=args.resume_id,
             config=args,
             project=args.wandb_project,

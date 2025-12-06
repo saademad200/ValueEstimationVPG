@@ -10,12 +10,13 @@ mkdir -p results
 export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 
 # Paper settings
-TOTAL_TIMESTEPS_HOPPER_WALKER=5000000  # 5M for Hopper and Walker
-TOTAL_TIMESTEPS_HALFCHEETAH=10000000   # 10M for HalfCheetah
+TOTAL_TIMESTEPS_HOPPER_WALKER=1000000  # 1M for Hopper and Walker
+TOTAL_TIMESTEPS_HALFCHEETAH=2000000   # 2M for HalfCheetah
 NUM_ENVS=64
 VPG_NUM_STEPS=32
 PPO_NUM_STEPS=2048
-MAX_PARALLEL=2
+MAX_PARALLEL=4
+
 
 WANDB_PROJECT="value-estimation-replication"
 WANDB_ENTITY="syedsaadhasanemad-iba-institute-of-business-administration"
@@ -79,7 +80,7 @@ run_ppo_experiment() {
     local timesteps=$(get_timesteps "$env")
     local epochs=$((timesteps / 10240))  # Match VPG's ~10k steps per test
     
-    EXTRA_ARGS="--task $env --seed $seed --gae-lambda $gae_lambda --gamma 0.99 --step-per-collect 2048 --step-per-epoch 10240 --training-num $NUM_ENVS --epoch $epochs --batch-size 64 --wandb-project $WANDB_PROJECT --wandb-entity $WANDB_ENTITY"
+    EXTRA_ARGS="--task $env --seed $seed --gae-lambda $gae_lambda --gamma 0.99 --step-per-collect 2048 --step-per-epoch 10240 --training-num 16 --epoch $epochs --batch-size 64 --wandb-project $WANDB_PROJECT --wandb-entity $WANDB_ENTITY"
 
     echo "[$(date)] Starting PPO: env=$env, gae_lambda=$gae_lambda, seed=$seed"
 
@@ -114,11 +115,13 @@ echo ""
 for env in "${ENVS[@]}"; do
     for gae_lambda in "${GAE_LAMBDAS[@]}"; do
         for seed in "${SEEDS[@]}"; do
-            # Run VPG with value_steps=50 (paper's recommended setting)
-            while [ $(jobs -r | wc -l) -ge $MAX_PARALLEL ]; do sleep 1; done
-            run_vpg_experiment "$gae_lambda" 50 "$env" "$seed" &
+            # Run VPG with different value_steps (Table 2 & Figure 2 ablation)
+            for vs in "${VALUE_STEPS[@]}"; do
+                while [ $(jobs -r | wc -l) -ge $MAX_PARALLEL ]; do sleep 1; done
+                run_vpg_experiment "$gae_lambda" "$vs" "$env" "$seed" &
+            done
 
-            # Run PPO baseline
+            # Run PPO baseline (only once per env/seed/lambda)
             while [ $(jobs -r | wc -l) -ge $MAX_PARALLEL ]; do sleep 1; done
             run_ppo_experiment "$gae_lambda" "$env" "$seed" &
         done
