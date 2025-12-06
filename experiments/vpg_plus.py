@@ -268,6 +268,7 @@ if __name__ == "__main__":
         if episode_rewards:
             avg_reward = np.mean(episode_rewards)
             writer.add_scalar("charts/avg_episode_reward", avg_reward, global_step)
+            writer.add_scalar("train/reward", avg_reward, global_step)
             print(f"Step {global_step}, Reward: {avg_reward:.2f}, Clip Frac: {clip_frac:.3f}")
 
         writer.add_scalar("charts/clip_fraction", clip_frac, global_step)
@@ -275,8 +276,8 @@ if __name__ == "__main__":
         writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
-        # Evaluate
-        if (((global_step + args.batch_size) // 10000) - ((global_step) // 10000)) > 0:
+        # Evaluate every 10240 steps (matches PPO)
+        if (((global_step + args.batch_size) // 10240) - ((global_step) // 10240)) > 0:
             envs2.obs_rms = envs.obs_rms
             obser, info = envs2.reset(seed=args.seed)
             S = 0.
@@ -288,8 +289,9 @@ if __name__ == "__main__":
                 S = S + reward
                 if terminated or truncated:
                     break
+            writer.add_scalar("test/reward", S[0], global_step)
             print(f"Eval Reward: {S[0]:.2f}")
-            reward_curve.append(S[0])
+            reward_curve.append((global_step, S[0]))
 
     envs.close()
     print(f"Time elapsed: {time.time() - start_time:.2f}s")
