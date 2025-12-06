@@ -232,6 +232,24 @@ def test_ppo(args=get_args()):
                 self.data.append((env_step, reward))
         
         curve_tracker = LearningCurveCallback()
+
+        # Monkeypatch policy.update to log cumulative reward (sum of rewards in batch)
+        # This matches VPG's "charts/cumulative_reward"
+        original_update = policy.update
+        def custom_update(sample_size, buffer, **kwargs):
+            # Calculate cumulative reward from the collected batch
+            # buffer is the ReplayBuffer passed to update
+            if buffer is not None:
+                # Iterate through buffer to sum rewards (buffer[:] returns a Batch)
+                batch = buffer[:]
+                if hasattr(batch, 'rew'):
+                    cum_reward = batch.rew.sum()
+                    global_step = train_collector.collect_step
+                    writer.add_scalar("charts/cumulative_reward", cum_reward, global_step)
+            
+            return original_update(sample_size, buffer, **kwargs)
+        
+        policy.update = custom_update
         
         # trainer
         result = onpolicy_trainer(
