@@ -18,7 +18,7 @@ PPO_NUM_STEPS=2048
 MAX_PARALLEL=4
 
 
-WANDB_PROJECT="value-estimation-replication"
+WANDB_PROJECT="value-estimation-replication-v2"
 WANDB_ENTITY="syedsaadhasanemad-iba-institute-of-business-administration"
 
 # Paper uses 5 seeds for statistical significance
