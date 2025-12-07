@@ -21,7 +21,13 @@ EXPERIMENT_NAMES = {
     'vpg_critic_128': 'VPG Critic 128x128',
     'vpg_critic_256': 'VPG Critic 256x256',
     'vpg_plus': 'VPG+',
-    'vpg_baseline': 'VPG Baseline (vs=50)',
+    'vpg_valstep_50': 'VPG Baseline (vs=50)',
+    'vpg_valstep_100': 'VPG (vs=100)',
+    'vpg_mc': 'VPG Monte Carlo',
+    'vpg_nstep5': 'VPG 5-step',
+    'vpg_gae': 'VPG GAE',
+    'vpg_gaenorm': 'VPG GAE (Norm)',
+    'vpg_hybrid': 'VPG Hybrid (Ours)',
 }
 
 
@@ -73,19 +79,29 @@ def load_all_results(logs_dir: Path) -> pd.DataFrame:
     """Load results from all log files."""
     results = []
     
+    # Regex to capture Env, Experiment Name, and Seed
+    # Matches: {Env}_{ExpName}_s{Seed}.log
+    # Example: Hopper-v4_vpg_adaptive_s0.log
+    # We look for standard env names at the start
+    filename_pattern = re.compile(r'^(Hopper-v4|Walker2d-v4|HalfCheetah-v4)_(.+)_s(\d+)\.log$')
+
     for log_file in logs_dir.glob("*.log"):
-        # Parse experiment name and seed from filename
-        name_match = re.match(r'(.+)_s(\d+)\.log', log_file.name)
-        if not name_match:
+        match = filename_pattern.match(log_file.name)
+        if not match:
+            # Try fallback for old naming (no env prefix) if necessary, or skip
+            # For this task, we assume new naming convention
+            # print(f"Skipping non-matching file: {log_file.name}")
             continue
         
-        exp_name = name_match.group(1)
-        seed = int(name_match.group(2))
+        env_name = match.group(1)
+        exp_name = match.group(2)
+        seed = int(match.group(3))
         
         metrics = parse_log_file(log_file)
         
         if metrics['final_reward'] is not None:
             results.append({
+                'env': env_name,
                 'experiment': exp_name,
                 'display_name': EXPERIMENT_NAMES.get(exp_name, exp_name),
                 'seed': seed,
@@ -144,7 +160,7 @@ def plot_compute_efficiency(df: pd.DataFrame, output_dir: Path):
     fig, ax = plt.subplots(figsize=(8, 6))
     
     scatter = ax.scatter(summary['time_elapsed'], summary['final_reward'], 
-                        s=100, c=range(len(summary)), cmap='husl')
+                        s=100, c=range(len(summary)), cmap='viridis')
     
     for _, row in summary.iterrows():
         ax.annotate(row['display_name'], 
@@ -157,6 +173,40 @@ def plot_compute_efficiency(df: pd.DataFrame, output_dir: Path):
     
     plt.tight_layout()
     output_path = output_dir / 'compute_efficiency.png'
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"Saved: {output_path}")
+    plt.close()
+
+
+    plt.close()
+
+
+def plot_time_comparison(df: pd.DataFrame, output_dir: Path):
+    """Bar chart comparing execution time of all methods."""
+    if 'time_elapsed' not in df.columns or df['time_elapsed'].isna().all():
+        print("No timing data available for time comparison plot")
+        return
+    
+    summary = df.groupby('display_name').agg({
+        'time_elapsed': 'mean'
+    }).reset_index()
+    summary = summary.sort_values('time_elapsed', ascending=True)
+    
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    colors = sns.color_palette("husl", len(summary))
+    bars = ax.barh(summary['display_name'], summary['time_elapsed'], color=colors)
+    
+    ax.set_xlabel('Execution Time (seconds)')
+    ax.set_title('Average Execution Time by Experiment')
+    
+    # Add value labels
+    for bar, val in zip(bars, summary['time_elapsed']):
+        ax.text(val + 5, bar.get_y() + bar.get_height()/2, 
+                f'{val:.1f}s', va='center', fontsize=9)
+    
+    plt.tight_layout()
+    output_path = output_dir / 'time_comparison.png'
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     print(f"Saved: {output_path}")
     plt.close()
@@ -242,22 +292,35 @@ def main():
     
     print(f"Found {len(df)} result entries")
     
-    # Generate plots
-    print("\n=== Generating Plots ===")
-    plot_performance_comparison(df, output_dir)
-    plot_compute_efficiency(df, output_dir)
-    plot_adaptive_value_steps(df, output_dir)
-    
-    # Print summary
-    print("\n=== Summary Table ===")
-    print(generate_summary_table(df))
-    
-    # Save summary
-    summary_path = output_dir / 'summary.md'
-    with open(summary_path, 'w') as f:
-        f.write("# Experiment Results Summary\n\n")
-        f.write(generate_summary_table(df))
-    print(f"\nSaved summary to: {summary_path}")
+    # Iterate over environments
+    envs = df['env'].unique()
+    print(f"Environments found: {envs}")
+
+    for env in envs:
+        print(f"\n=== Processing Environment: {env} ===")
+        env_df = df[df['env'] == env].copy()
+        env_output_dir = output_dir / env
+        env_output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Generate plots for this environment
+        plot_performance_comparison(env_df, env_output_dir)
+        plot_compute_efficiency(env_df, env_output_dir)
+        plot_time_comparison(env_df, env_output_dir)
+        plot_adaptive_value_steps(env_df, env_output_dir)
+        
+        # Print summary for this environment
+        print(f"\n--- Summary Table for {env} ---")
+        summary_table = generate_summary_table(env_df)
+        print(summary_table)
+        
+        # Save summary
+        summary_path = env_output_dir / 'summary.md'
+        with open(summary_path, 'w') as f:
+            f.write(f"# Experiment Results Summary: {env}\n\n")
+            f.write(summary_table)
+        print(f"Saved summary to: {summary_path}")
+
+    print(f"\nAll plots saved to: {output_dir}")
 
 
 if __name__ == "__main__":

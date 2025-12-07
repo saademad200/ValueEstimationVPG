@@ -10,10 +10,11 @@ mkdir -p results/experiments
 
 MODE="${1:---quick}"
 
-WANDB_PROJECT="value-estimation-experiments"
+WANDB_PROJECT="value-estimation-experiments-v2"
 WANDB_ENTITY="syedsaadhasanemad-iba-institute-of-business-administration"
 TIMESTEPS=1000000
 SEEDS=(0)
+MAX_PARALLEL=4
 
 ENV="Hopper-v4"
 
@@ -58,28 +59,48 @@ for ENV in "${ENVS[@]}"; do
         echo "--- Seed $seed ---"
         
         # Experiment 1: Adaptive Value Steps
-        run_experiment "${ENV}_vpg_adaptive" "vpg_adaptive.py" "" $seed
+        while [ $(jobs -r | wc -l) -ge $MAX_PARALLEL ]; do sleep 1; done
+        run_experiment "${ENV}_vpg_adaptive" "vpg_adaptive.py" "" $seed &
         
         # Experiment 2a: Large Critic (128x128)
-        run_experiment "${ENV}_vpg_critic_128" "vpg_large_critic.py" "--critic-sizes 128 128" $seed
+        while [ $(jobs -r | wc -l) -ge $MAX_PARALLEL ]; do sleep 1; done
+        run_experiment "${ENV}_vpg_critic_128" "vpg_large_critic.py" "--critic-sizes 128 128" $seed &
         
         # Experiment 2b: XL Critic (256x256)  
-        run_experiment "${ENV}_vpg_critic_256" "vpg_large_critic.py" "--critic-sizes 256 256" $seed
+        while [ $(jobs -r | wc -l) -ge $MAX_PARALLEL ]; do sleep 1; done
+        run_experiment "${ENV}_vpg_critic_256" "vpg_large_critic.py" "--critic-sizes 256 256" $seed &
         
         # Experiment 3: VPG+ (with clipping)
-        run_experiment "${ENV}_vpg_plus" "vpg_plus.py" "--clip-eps 0.2" $seed
+        while [ $(jobs -r | wc -l) -ge $MAX_PARALLEL ]; do sleep 1; done
+        run_experiment "${ENV}_vpg_plus" "vpg_plus.py" "--clip-eps 0.2" $seed &
         
         # Experiment 4: Alternative Advantage Estimators
-        run_experiment "${ENV}_vpg_mc" "vpg_advantage.py" "--advantage-type mc" $seed
-        run_experiment "${ENV}_vpg_nstep5" "vpg_advantage.py" "--advantage-type nstep --nstep 5" $seed
-        run_experiment "${ENV}_vpg_gae" "vpg_advantage.py" "--advantage-type gae --gae-lambda 0.95" $seed
+        while [ $(jobs -r | wc -l) -ge $MAX_PARALLEL ]; do sleep 1; done
+        run_experiment "${ENV}_vpg_mc" "vpg_advantage.py" "--advantage-type mc" $seed &
+        while [ $(jobs -r | wc -l) -ge $MAX_PARALLEL ]; do sleep 1; done
+        run_experiment "${ENV}_vpg_nstep5" "vpg_advantage.py" "--advantage-type nstep --nstep 5" $seed &
+        while [ $(jobs -r | wc -l) -ge $MAX_PARALLEL ]; do sleep 1; done
+        run_experiment "${ENV}_vpg_gae" "vpg_advantage.py" "--advantage-type gae --gae-lambda 0.95" $seed &
         
+        # Experiment 4b: Normalized GAE (New "Better" Advantage)
+        while [ $(jobs -r | wc -l) -ge $MAX_PARALLEL ]; do sleep 1; done
+        run_experiment "${ENV}_vpg_gaenorm" "vpg_advantage.py" "--advantage-type gae --gae-lambda 0.95 --norm-adv" $seed &
+
+        # Experiment 5: VPG-Hybrid (Adaptive + Norm + LargeCritic + Clip)
+        while [ $(jobs -r | wc -l) -ge $MAX_PARALLEL ]; do sleep 1; done
+        run_experiment "${ENV}_vpg_hybrid" "vpg_hybrid.py" "" $seed &
+
         # Value Step Comparison
-        run_experiment "${ENV}_vpg_valstep_50" "../VPG_single_file.py" "--num-value-step 50" $seed
-        run_experiment "${ENV}_vpg_valstep_100" "../VPG_single_file.py" "--num-value-step 100" $seed
+        while [ $(jobs -r | wc -l) -ge $MAX_PARALLEL ]; do sleep 1; done
+        run_experiment "${ENV}_vpg_valstep_50" "../VPG_single_file.py" "--num-value-step 50" $seed &
+        while [ $(jobs -r | wc -l) -ge $MAX_PARALLEL ]; do sleep 1; done
+        run_experiment "${ENV}_vpg_valstep_100" "../VPG_single_file.py" "--num-value-step 100" $seed &
         
     done
 done
+
+wait
+
 
 echo ""
 echo "=== All Experiments Complete ==="

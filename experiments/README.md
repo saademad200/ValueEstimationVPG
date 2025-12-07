@@ -59,22 +59,22 @@ This script compares different methods for estimating the advantage function $A(
 
 **Expectation:** `vpg_gaenorm` > `vpg_gae` > `vpg_nstep` > `vpg_mc`.
 
-### 5. Superior VPG (`experiments/vpg_superior.py`)
-This experiment combines the most effective features identified in previous ablation studies into a single "best-of-class" algorithm.
+### 5. VPG-Hybrid (`experiments/vpg_hybrid.py`)
+This experiment represents the culmination of this study, proposing a hybrid algorithm that integrates all improved components. A key paper contribution would be "H-VPG".
 
 **Combined Features:**
 1.  **Normalized GAE:** Derived from `vpg_gaenorm`. Stabilizes advantages.
 2.  **Large Critic Network:** Uses the [128, 128] architecture from `vpg_large_critic`.
 3.  **PPO-style Clipping:** Incorporates the clipping mechanism from `vpg_plus` to prevent catastrophic updates.
-4.  **High Value Steps:** Default 50 value steps.
+4.  **Adaptive Value Steps:** Uses the dynamic step sizing from `vpg_adaptive` to optimize compute efficiency.
 
-**Hypothesis:** This "Frankenstein" algorithm should outperform all individual variants by combining stability (Norm-GAE, Clipping) with capacity (Large Critic) and sample efficiency (High Value Steps).
+**Hypothesis:** This hybrid algorithm is expected to offer the best trade-off between final performance, stability, and training efficiency, outperforming all individual variants.
 
 ---
 
 ## Running Experiments
 
-To run all experiments (including the new Superior VPG), execute:
+To run all experiments (including the new Hybrid VPG), execute:
 ```bash
 ./experiments/run_experiments.sh
 ```
