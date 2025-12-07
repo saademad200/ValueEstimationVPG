@@ -5,7 +5,7 @@
 import os
 import random
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List
 from torch.utils.tensorboard import SummaryWriter
 
@@ -56,9 +56,9 @@ class Args:
     """the number of value steps per iteration"""
     
     # Architecture parameters
-    actor_sizes: List[int] = (64, 64)
+    actor_sizes: List[int] = field(default_factory=lambda: [64, 64])
     """hidden layer sizes for actor network"""
-    critic_sizes: List[int] = (128, 128)
+    critic_sizes: List[int] = field(default_factory=lambda: [128, 128])
     """hidden layer sizes for critic network (larger for ablation)"""
     
     ent_coef: float = 0.0
@@ -271,6 +271,7 @@ if __name__ == "__main__":
         writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
         writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+        writer.add_scalar("charts/time_elapsed", time.time() - start_time, global_step)
 
         # Evaluate every 10240 steps (matches PPO)
         if (((global_step + args.batch_size) // 10240) - ((global_step) // 10240)) > 0:
