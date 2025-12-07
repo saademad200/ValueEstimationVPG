@@ -13,7 +13,7 @@ MODE="${1:---quick}"
 WANDB_PROJECT="value-estimation-experiments"
 WANDB_ENTITY="syedsaadhasanemad-iba-institute-of-business-administration"
 TIMESTEPS=1000000
-SEEDS=(0 1 2)
+SEEDS=(0)
 
 ENV="Hopper-v4"
 
@@ -47,7 +47,7 @@ echo "Environment: $ENV"
 echo "Timesteps: $TIMESTEPS"
 echo ""
 
-ENVS=("Hopper-v4" "Walker2d-v4" "HalfCheetah-v4")
+ENVS=("Hopper-v4" "Walker2d-v4")
 
 for ENV in "${ENVS[@]}"; do
     echo "=========================================="
