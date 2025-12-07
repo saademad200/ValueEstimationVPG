@@ -283,6 +283,7 @@ if __name__ == "__main__":
         writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
         writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+        writer.add_scalar("charts/time_elapsed", time.time() - start_time, global_step)
 
         # Evaluate every 10240 steps (matches PPO)
         if (((global_step + args.batch_size) // 10240) - ((global_step) // 10240)) > 0:

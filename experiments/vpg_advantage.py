@@ -64,6 +64,9 @@ class Args:
     nstep: int = 5
     """n for n-step returns (only used if advantage_type='nstep')"""
     
+    norm_adv: bool = False
+    """if toggled, advantages will be normalized"""
+
     num_value_step: int = 50
     """the number of value steps per iteration"""
     ent_coef: float = 0.0
@@ -198,6 +201,9 @@ if __name__ == "__main__":
     elif args.advantage_type == "nstep":
         adv_str = f"nstep{args.nstep}"
     
+    if args.norm_adv:
+        adv_str += "_norm"
+
     run_name = f"{args.env_id}__VPG_{adv_str}_vs{args.num_value_step}_s{args.seed}"
 
     # Initialize wandb if tracking is enabled
@@ -303,7 +309,12 @@ if __name__ == "__main__":
         b_obs = obs.reshape((-1,) + envs.single_observation_space.shape)
         b_actions = actions.reshape((-1,) + envs.single_action_space.shape)
         b_advantages = advantages.reshape(-1)
+        b_advantages = advantages.reshape(-1)
         b_returns = returns.reshape(-1)
+
+        # Normalize advantages if requested
+        if args.norm_adv:
+            b_advantages = (b_advantages - b_advantages.mean()) / (b_advantages.std() + 1e-8)
 
         # Value loss with multiple steps
         _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs, b_actions)
@@ -347,6 +358,7 @@ if __name__ == "__main__":
         writer.add_scalar("charts/advantage_mean", b_advantages.mean().item(), global_step)
         writer.add_scalar("charts/advantage_std", b_advantages.std().item(), global_step)
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+        writer.add_scalar("charts/time_elapsed", time.time() - start_time, global_step)
 
         # Evaluate every 10240 steps (matches PPO)
         if (((global_step + args.batch_size) // 10240) - ((global_step) // 10240)) > 0:
