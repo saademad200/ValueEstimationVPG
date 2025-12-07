@@ -10,7 +10,7 @@ mkdir -p results/experiments
 
 MODE="${1:---quick}"
 
-WANDB_PROJECT="value-estimation-experiments-v3"
+WANDB_PROJECT="value-estimation-experiments-v2"
 WANDB_ENTITY="syedsaadhasanemad-iba-institute-of-business-administration"
 TIMESTEPS=1000000
 SEEDS=(0)
@@ -47,7 +47,7 @@ echo "Environment: $ENV"
 echo "Timesteps: $TIMESTEPS"
 echo ""
 
-ENVS=("Hopper-v4" "Walker2d-v4" "HalfCheetah-v4")
+ENVS=("Hopper-v4" "Walker2d-v4")
 
 for ENV in "${ENVS[@]}"; do
     echo "=========================================="
@@ -85,15 +85,30 @@ for ENV in "${ENVS[@]}"; do
         while [ $(jobs -r | wc -l) -ge $MAX_PARALLEL ]; do sleep 1; done
         run_experiment "${ENV}_vpg_gaenorm" "vpg_advantage.py" "--advantage-type gae --gae-lambda 0.95 --norm-adv" $seed "$ENV" &
 
-        # Experiment 5: VPG-Hybrid (Adaptive + Norm + LargeCritic + Clip)
-        while [ $(jobs -r | wc -l) -ge $MAX_PARALLEL ]; do sleep 1; done
-        run_experiment "${ENV}_vpg_hybrid" "vpg_hybrid.py" "" $seed "$ENV" &
-
         # Value Step Comparison
         while [ $(jobs -r | wc -l) -ge $MAX_PARALLEL ]; do sleep 1; done
         run_experiment "${ENV}_vpg_valstep_50" "../VPG_single_file.py" "--num-value-step 50" $seed "$ENV" &
         while [ $(jobs -r | wc -l) -ge $MAX_PARALLEL ]; do sleep 1; done
         run_experiment "${ENV}_vpg_valstep_100" "../VPG_single_file.py" "--num-value-step 100" $seed "$ENV" &
+
+        # --- New Combinations (vpg_combo.py) ---
+
+        # 1. Clipped + Normalized (Equivalent to VPG+)
+        while [ $(jobs -r | wc -l) -ge $MAX_PARALLEL ]; do sleep 1; done
+        run_experiment "${ENV}_combo_clip_norm" "vpg_combo.py" "--clip-eps 0.2 --norm-adv" $seed "$ENV" &
+
+        # 2. Clipping + Adaptive
+        while [ $(jobs -r | wc -l) -ge $MAX_PARALLEL ]; do sleep 1; done
+        run_experiment "${ENV}_combo_clip_adaptive" "vpg_combo.py" "--clip-eps 0.2 --adaptive-value-steps" $seed "$ENV" &
+
+        # 3. Clipping + Adaptive + Normalized
+        while [ $(jobs -r | wc -l) -ge $MAX_PARALLEL ]; do sleep 1; done
+        run_experiment "${ENV}_combo_clip_adaptive_norm" "vpg_combo.py" "--clip-eps 0.2 --adaptive-value-steps --norm-adv" $seed "$ENV" &
+
+        # 4. MC + Adaptive
+        while [ $(jobs -r | wc -l) -ge $MAX_PARALLEL ]; do sleep 1; done
+        run_experiment "${ENV}_combo_mc_adaptive" "vpg_combo.py" "--advantage-type mc --adaptive-value-steps" $seed "$ENV" &
+
         
     done
 done

@@ -17,6 +17,7 @@ plt.style.use('seaborn-v0_8-whitegrid')
 sns.set_palette("husl")
 
 EXPERIMENT_NAMES = {
+    'vpg_baseline': 'VPG Baseline (vs=50)',
     'vpg_adaptive': 'VPG Adaptive',
     'vpg_critic_128': 'VPG Critic 128x128',
     'vpg_critic_256': 'VPG Critic 256x256',
@@ -27,7 +28,11 @@ EXPERIMENT_NAMES = {
     'vpg_nstep5': 'VPG 5-step',
     'vpg_gae': 'VPG GAE',
     'vpg_gaenorm': 'VPG GAE (Norm)',
-    'vpg_hybrid': 'VPG Hybrid (Ours)',
+    'vpg_hybrid': 'VPG Hybrid (Large Critic)',
+    'combo_clip_norm': 'VPG (Clip + Norm)',
+    'combo_clip_adaptive': 'VPG (Clip + Adapt)',
+    'combo_clip_adaptive_norm': 'VPG (Clip + Adapt + Norm)',
+    'combo_mc_adaptive': 'VPG (MC + Adapt)',
 }
 
 
