@@ -25,7 +25,7 @@ WANDB_ENTITY="syedsaadhasanemad-iba-institute-of-business-administration"
 SEEDS=(0 1 2 3 4)
 
 # Environments from Table 2
-ENVS=("Hopper-v4" "Walker2d-v4" "HalfCheetah-v4")
+ENVS=("Hopper-v4" "Walker2d-v4")
 
 # GAE lambda values from Table 2
 GAE_LAMBDAS=("0.95" "1.0")
